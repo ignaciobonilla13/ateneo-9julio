@@ -1,7 +1,7 @@
 import { DEFAULT_DESIGN, FONT_OPTIONS } from '@shared/design.js'
 import { GROUPS } from '@shared/groups.js'
 import { letterOf, money, percent } from '@shared/format.js'
-import { newId, parseOptionLines, serializeCards } from '@shared/text.js'
+import { newId, parseOptionLines } from '@shared/text.js'
 import { useEffect, useRef, useState } from 'react'
 import { LoadingScreen, Modal } from '../components/Chrome.jsx'
 import { SlideView } from '../components/SlideView.jsx'
@@ -24,10 +24,38 @@ const VARIANTS = [
   { id: 'reveal', label: 'Revelación' },
   { id: 'criteria', label: 'Criterios' },
   { id: 'evolution', label: 'Evolución' },
-  { id: 'takeaways', label: 'Mensajes' },
+  { id: 'takeaways', label: 'Mensajes numerados' },
+  { id: 'panels', label: 'Recuadros con viñetas' },
+  { id: 'bars', label: 'Barras' },
+  { id: 'spotlight', label: 'Pantalla oscura' },
 ]
 
 const TYPE_LABEL = Object.fromEntries(TYPES.map((type) => [type.id, type.label]))
+
+const SKINS = [
+  { id: 'claro', label: 'Claro' },
+  { id: 'tarjeta', label: 'Tarjeta' },
+  { id: 'oscuro', label: 'Oscuro' },
+  { id: 'centrado', label: 'Centrado' },
+  { id: 'franja', label: 'Franja' },
+]
+
+function SkinPicker({ value, onChange }) {
+  return (
+    <div className="skin-picker">
+      {SKINS.map((skin) => (
+        <button key={skin.id} type="button" className="skin-choice" data-on={value === skin.id ? 'true' : 'false'} onClick={() => onChange(skin.id)}>
+          <span className="skin-swatch" data-skin={skin.id} />
+          {skin.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function slideName(item) {
+  return (item.title || item.question || 'Sin título').replace(/\*/g, '')
+}
 
 function blankSlide(type) {
   const slide = {
@@ -36,6 +64,7 @@ function blankSlide(type) {
     role: null,
     locked: false,
     variant: 'plain',
+    skin: 'claro',
     kicker: '',
     title: 'Nueva diapositiva',
     subtitle: '',
@@ -68,7 +97,7 @@ function blankSlide(type) {
 function sampleResults(slide) {
   if (!slide) return null
   if (slide.role === 'service') {
-    const counts = [8, 5, 3]
+    const counts = [8, 5, 3, 2]
     const total = counts.reduce((sum, count) => sum + count, 0)
     return {
       kind: 'service',
@@ -208,7 +237,7 @@ function OptionEditor({ slide, onChange }) {
     return (
       <div className="grid gap-3">
         {options.map((option, index) => (
-          <Field key={option.id} label={option.id === 'uti' ? 'Nombre de UTI' : option.id === 'uco' ? 'Nombre de UCO' : 'Nombre de Clínica'}>
+          <Field key={option.id} label={option.id === 'uti' ? 'Nombre de UTI' : option.id === 'uco' ? 'Nombre de UCO' : option.id === 'otros' ? 'Nombre de Otros' : 'Nombre de Clínica Médica'}>
             <input className="field" value={option.label} onChange={(event) => edit(index, { label: event.target.value })} />
           </Field>
         ))}
@@ -218,11 +247,11 @@ function OptionEditor({ slide, onChange }) {
 
   return (
     <div className="grid gap-3">
-      <p className="text-sm" style={{ color: 'var(--muted)' }}>
+        <p className="editor-note">
         {priced ? 'Formato: estudio | precio | nota opcional.' : 'Una opción por línea si pegás un listado.'}
       </p>
       {options.map((option, index) => (
-        <div key={option.id} className="grid gap-2 rounded-2xl border p-3" style={{ borderColor: 'var(--line)' }}>
+        <div key={option.id} className="grid gap-2 rounded-2xl border p-3" style={{ borderColor: '#b7c7c3' }}>
           <div className="flex items-center gap-2">
             <span className="w-8 font-bold">{letterOf(index)}</span>
             <input className="field" value={option.label} onChange={(event) => edit(index, { label: event.target.value })} />
@@ -231,7 +260,7 @@ function OptionEditor({ slide, onChange }) {
             <div className="grid gap-2 sm:grid-cols-[160px_1fr_auto]">
               <input className="field" inputMode="numeric" value={option.price ?? 0} onChange={(event) => edit(index, { price: Number(event.target.value.replace(/[^\d]/g, '') || 0) })} />
               <input className="field" placeholder="Nota opcional" value={option.note || ''} onChange={(event) => edit(index, { note: event.target.value })} />
-              <span className="self-center text-sm tabular-nums" style={{ color: 'var(--muted)' }}>{money(option.price || 0)}</span>
+              <span className="editor-note self-center tabular-nums">{money(option.price || 0)}</span>
             </div>
           )}
           <div className="flex gap-2 text-sm">
@@ -241,7 +270,7 @@ function OptionEditor({ slide, onChange }) {
           </div>
         </div>
       ))}
-      <button type="button" className="rounded-2xl border px-3 py-2 text-left" style={{ borderColor: 'var(--line)' }} onClick={() => setOptions([...options, { id: newId(), label: 'Nueva opción', price: priced ? 0 : null, note: '' }])}>
+      <button type="button" className="editor-btn justify-self-start" onClick={() => setOptions([...options, { id: newId(), label: 'Nueva opción', price: priced ? 0 : null, note: '' }])}>
         Agregar opción
       </button>
       <Field label={priced ? 'Pegar listado (estudio | precio | nota opcional)' : 'Pegar listado (una opción por línea)'}>
@@ -249,6 +278,28 @@ function OptionEditor({ slide, onChange }) {
       </Field>
       {pasteError && <p className="text-sm" style={{ color: 'var(--accent)' }}>{pasteError}</p>}
       <button type="button" className="rounded-full px-4 py-2 font-semibold" style={{ background: 'var(--card)' }} onClick={applyPaste}>Reemplazar con el listado</button>
+    </div>
+  )
+}
+
+function CardEditor({ cards, onChange }) {
+  const list = cards || []
+  function update(index, patch) {
+    onChange(list.map((card, cardIndex) => cardIndex === index ? { ...card, ...patch } : card))
+  }
+  return (
+    <div className="grid gap-3">
+      {list.map((card, index) => (
+        <div key={index} className="grid gap-2 rounded-2xl border p-3" style={{ borderColor: '#b7c7c3' }}>
+          <input className="field" placeholder="Título del recuadro" value={card.label || ''} onChange={(event) => update(index, { label: event.target.value })} />
+          <input className="field" placeholder="Valor, si es un número o un dato corto" value={card.value || ''} onChange={(event) => update(index, { value: event.target.value })} />
+          <textarea className="field min-h-24" placeholder="Una viñeta por línea" value={(card.points || []).join('\n')} onChange={(event) => update(index, { points: event.target.value.split('\n') })} />
+          <button type="button" className="justify-self-start text-sm" onClick={() => onChange(list.filter((_, cardIndex) => cardIndex !== index))}>Quitar este recuadro</button>
+        </div>
+      ))}
+      <button type="button" className="editor-btn justify-self-start" onClick={() => onChange([...list, { label: 'Nuevo recuadro', value: '', points: [] }])}>
+        Agregar recuadro
+      </button>
     </div>
   )
 }
@@ -313,6 +364,21 @@ export default function EditorPage({ onProject }) {
     setDirty(true)
   }
 
+  function changeType(nextType) {
+    if (slide.locked || slide.role || nextType === slide.type) return
+    const patch = { type: nextType }
+    if ((nextType === 'single' || nextType === 'multi' || nextType === 'words') && !slide.question) {
+      patch.question = slide.title || 'Nueva pregunta'
+    }
+    if ((nextType === 'single' || nextType === 'multi') && (slide.options || []).length < 2) {
+      patch.options = [
+        { id: newId(), label: 'Opción A', price: null, note: '' },
+        { id: newId(), label: 'Opción B', price: null, note: '' },
+      ]
+    }
+    patchSlide(patch)
+  }
+
   function addSlide() {
     if (addType === 'cost' && hasCost) return
     const created = blankSlide(addType)
@@ -368,69 +434,105 @@ export default function EditorPage({ onProject }) {
   }
 
   return (
-    <div className="min-h-dvh" style={{ background: '#0e1116', color: '#f4f6f8' }}>
-      <header className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b px-4 py-3" style={{ background: '#0e1116', borderColor: 'var(--line)' }}>
+    <div className="editor min-h-dvh">
+      <header className="editor-bar">
         <div className="mr-auto">
           <p className="kicker">Editor</p>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>{dirty ? 'Cambios sin guardar' : notice || 'En vivo con la sala'}</p>
+          <p className="editor-note">{dirty ? 'Cambios sin guardar' : notice || 'En vivo con la sala'}</p>
         </div>
-        <button type="button" className="rounded-full px-3 py-2 text-sm font-semibold" style={{ background: '#171c24' }} onClick={onProject}>Volver a proyectar</button>
-        <button type="button" className="rounded-full px-3 py-2 text-sm font-semibold" onClick={exportCsv}>Exportar CSV</button>
-        <button type="button" className="rounded-full px-3 py-2 text-sm font-semibold" onClick={() => setPending({ type: 'restore' })}>Restaurar contenido</button>
-        <button type="button" className="rounded-full px-4 py-2 text-sm font-semibold text-white" style={{ background: '#e5383b' }} disabled={saving} onClick={save}>
+        <button type="button" className="editor-btn" onClick={onProject}>Volver a proyectar</button>
+        <button type="button" className="editor-btn" onClick={exportCsv}>Exportar CSV</button>
+        <button type="button" className="editor-btn" onClick={() => setPending({ type: 'restore' })}>Restaurar contenido</button>
+        <button type="button" className="editor-btn editor-btn-primary" disabled={saving} onClick={save}>
           {saving ? 'Publicando…' : 'Guardar y publicar'}
         </button>
       </header>
       {error && <p className="px-4 pt-3 text-sm" style={{ color: '#e5383b' }} role="alert">{error}</p>}
-      <div className="lg:grid lg:grid-cols-[250px_minmax(0,1fr)_340px]">
-        <aside className="border-b p-4 lg:border-b-0 lg:border-r" style={{ borderColor: 'var(--line)' }}>
+      <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)_360px]">
+        <aside className="editor-side border-b p-4 lg:border-b-0 lg:border-r">
           <label className="mb-3 block lg:hidden">
             <span className="field-label">Diapositiva</span>
             <select className="field" value={selected} onChange={(event) => setSelected(Number(event.target.value))}>
-              {draft.slides.map((item, index) => <option key={item.id} value={index}>{index + 1}. {item.title || item.question || 'Sin título'}</option>)}
+              {draft.slides.map((item, index) => <option key={item.id} value={index}>{index + 1}. {slideName(item)}</option>)}
             </select>
           </label>
           <ol className="hidden max-h-[70vh] gap-1 overflow-auto lg:grid">
             {draft.slides.map((item, index) => (
               <li key={item.id}>
-                <button type="button" className="w-full rounded-xl px-3 py-2 text-left" style={{ background: index === selected ? '#171c24' : 'transparent' }} onClick={() => setSelected(index)}>
-                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{String(index + 1).padStart(2, '0')} · {TYPE_LABEL[item.type] || item.type}{item.locked ? ' · base' : ''}</span>
-                  <span className="block truncate">{item.title || item.question || 'Sin título'}</span>
+                <button type="button" className="editor-slide" data-on={index === selected ? 'true' : 'false'} onClick={() => setSelected(index)}>
+                  <span className="editor-slide-meta">{String(index + 1).padStart(2, '0')} · {TYPE_LABEL[item.type] || item.type}{item.locked ? ' · base' : ''}</span>
+                  <span className="editor-slide-title">{slideName(item)}</span>
                 </button>
               </li>
             ))}
           </ol>
-          <div className="mt-4 flex gap-2">
-            <select className="field" value={addType} onChange={(event) => setAddType(event.target.value)}>
-              {TYPES.filter((type) => type.id !== 'cost' || !hasCost).map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}
-            </select>
-            <button type="button" className="rounded-2xl px-3 font-semibold" style={{ background: '#171c24' }} onClick={addSlide}>Agregar</button>
+          <div className="mt-4 grid gap-2">
+            <span className="field-label">Nueva diapositiva al final</span>
+            <div className="flex gap-2">
+              <select className="field" aria-label="Tipo de la diapositiva nueva" value={addType} onChange={(event) => setAddType(event.target.value)}>
+                {TYPES.filter((type) => type.id !== 'cost' || !hasCost).map((type) => <option key={type.id} value={type.id}>Nueva de {type.label.toLowerCase()}</option>)}
+              </select>
+              <button type="button" className="editor-btn" onClick={addSlide}>Agregar</button>
+            </div>
           </div>
         </aside>
         <main className="grid gap-4 p-4" key={`${slide.id}-${epoch}`}>
-          <div className="flex flex-wrap gap-2 text-sm">
-            <button type="button" onClick={() => moveSlide(selected, -1)} disabled={selected === 0}>Subir</button>
-            <button type="button" onClick={() => moveSlide(selected, 1)} disabled={selected === draft.slides.length - 1}>Bajar</button>
-            <button type="button" disabled={slide.locked} title={slide.locked ? 'Esta diapositiva no se puede borrar: es parte del análisis.' : 'Eliminar'} onClick={() => setPending({ type: 'delete' })}>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="editor-btn" onClick={() => moveSlide(selected, -1)} disabled={selected === 0}>Subir</button>
+            <button type="button" className="editor-btn" onClick={() => moveSlide(selected, 1)} disabled={selected === draft.slides.length - 1}>Bajar</button>
+            <button type="button" className="editor-btn" disabled={slide.locked} title={slide.locked ? 'Esta diapositiva no se puede borrar: es parte del análisis.' : 'Eliminar'} onClick={() => setPending({ type: 'delete' })}>
               Eliminar
             </button>
           </div>
-          <Field label="Antetítulo"><input className="field" value={slide.kicker || ''} onChange={(event) => patchSlide({ kicker: event.target.value })} /></Field>
-          <Field label="Título"><input className="field" value={slide.title || ''} onChange={(event) => patchSlide({ title: event.target.value })} /></Field>
-          <Field label="Subtítulo"><input className="field" value={slide.subtitle || ''} onChange={(event) => patchSlide({ subtitle: event.target.value })} /></Field>
-          {slide.type === 'text' && (
-            <Field label="Variante">
-              <select className="field" value={slide.variant || 'plain'} onChange={(event) => patchSlide({ variant: event.target.value })}>
-                {VARIANTS.map((variant) => <option key={variant.id} value={variant.id}>{variant.label}</option>)}
-              </select>
+          <section className="editor-card">
+            <p className="field-label">Tipo de esta diapositiva</p>
+            {slide.locked ? (
+              <p className="editor-note">
+                {slide.role === 'service'
+                  ? 'Esta diapositiva pregunta el área. En la proyección no se ven los botones: cada celular elige Clínica Médica, UTI, UCO u Otros. Los votos de después se separan por esa respuesta.'
+                  : `Esta diapositiva es parte del análisis (${TYPE_LABEL[slide.type] || slide.type}). Podés cambiar los textos, no el tipo.`}
+              </p>
+            ) : (
+              <>
+                <select className="field" aria-label="Tipo de esta diapositiva" value={slide.type} onChange={(event) => changeType(event.target.value)}>
+                  {TYPES.filter((type) => type.id !== 'cost').map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}
+                </select>
+                <p className="editor-note">
+                  Si la pasás a texto, deja de pedir votos. Hasta que publiques, podés volver atrás y las opciones siguen acá.
+                </p>
+              </>
+            )}
+          </section>
+          <section className="editor-card">
+            <p className="field-label">Diseño de esta diapositiva</p>
+            <SkinPicker value={slide.skin || 'claro'} onChange={(skin) => patchSlide({ skin })} />
+          </section>
+          <section className="editor-card">
+            <p className="field-label">Textos</p>
+            <Field label="Etiqueta superior"><input className="field" value={slide.kicker || ''} onChange={(event) => patchSlide({ kicker: event.target.value })} /></Field>
+            <Field label="Título"><input className="field" value={slide.title || ''} onChange={(event) => patchSlide({ title: event.target.value })} /></Field>
+            <Field label="Subtítulo"><input className="field" value={slide.subtitle || ''} onChange={(event) => patchSlide({ subtitle: event.target.value })} /></Field>
+            {slide.type === 'text' && (
+              <Field label="Cómo se ve">
+                <select className="field" value={slide.variant || 'plain'} onChange={(event) => patchSlide({ variant: event.target.value })}>
+                  {VARIANTS.map((variant) => <option key={variant.id} value={variant.id}>{variant.label}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label="Párrafos, uno por línea">
+              <textarea className="field min-h-28" value={(slide.body || []).join('\n')} onChange={(event) => patchSlide({ body: event.target.value.split('\n') })} />
             </Field>
+            <p className="editor-note">Para cursiva, rodeá la palabra con asteriscos: *llevar*.</p>
+          </section>
+          {slide.type === 'text' && slide.variant !== 'takeaways' && slide.variant !== 'spotlight' && (
+            <section className="editor-card">
+              <p className="field-label">Recuadros</p>
+              <CardEditor cards={slide.cards} onChange={(cards) => patchSlide({ cards })} />
+            </section>
           )}
-          <Field label="Texto (un párrafo por línea)">
-            <textarea className="field min-h-28" value={(slide.body || []).join('\n')} onChange={(event) => patchSlide({ body: event.target.value.split('\n') })} />
-          </Field>
-          {slide.type !== 'words' && slide.type !== 'cost' && (
-            <Field label="Tarjetas (etiqueta | valor)">
-              <textarea className="field min-h-24" defaultValue={serializeCards(slide.cards)} onChange={(event) => patchSlide({ cards: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean).map((line) => { const [label, ...rest] = line.split('|'); return { label: (label || '').trim(), value: rest.join('|').trim() } }).filter((card) => card.label && card.value) })} />
+          {slide.type === 'text' && (
+            <Field label="Franja al pie">
+              <textarea className="field min-h-20" value={slide.footnote || ''} onChange={(event) => patchSlide({ footnote: event.target.value })} />
             </Field>
           )}
           {(slide.type === 'single' || slide.type === 'multi' || slide.type === 'words') && (
@@ -481,16 +583,16 @@ export default function EditorPage({ onProject }) {
                     <button type="button" onClick={() => { setDirty(true); setDraft({ ...draft, priceTable: draft.priceTable.filter((_, itemIndex) => itemIndex !== index) }) }}>Quitar</button>
                   </div>
                 ))}
-                <button type="button" className="rounded-2xl border px-3 py-2 text-left" style={{ borderColor: 'var(--line)' }} onClick={() => { setDirty(true); setDraft({ ...draft, priceTable: [...draft.priceTable, { id: newId(), label: 'Nuevo ítem', price: 0 }] }) }}>
+                <button type="button" className="editor-btn justify-self-start" onClick={() => { setDirty(true); setDraft({ ...draft, priceTable: [...draft.priceTable, { id: newId(), label: 'Nuevo ítem', price: 0 }] }) }}>
                   Agregar fila
                 </button>
               </div>
             </>
           )}
         </main>
-        <aside className="grid content-start gap-4 border-t p-4 lg:border-l lg:border-t-0" style={{ borderColor: 'var(--line)' }}>
+        <aside className="editor-side grid content-start gap-4 border-t p-4 lg:border-l lg:border-t-0">
           <div>
-            <p className="field-label">Diseño</p>
+            <p className="field-label">Colores de toda la sala</p>
             {[
               ['accent1', 'Acento 1'],
               ['accent2', 'Acento 2'],
@@ -511,7 +613,7 @@ export default function EditorPage({ onProject }) {
                 {FONT_OPTIONS.map((font) => <option key={font.id} value={font.id}>{font.label}</option>)}
               </select>
             </Field>
-            <button type="button" className="mt-4 rounded-full px-3 py-2 text-sm font-semibold" style={{ background: '#171c24' }} onClick={() => patchDesign({ accent1: DEFAULT_DESIGN.accent1, accent2: DEFAULT_DESIGN.accent2, background: DEFAULT_DESIGN.background, card: DEFAULT_DESIGN.card, text: DEFAULT_DESIGN.text })}>
+            <button type="button" className="editor-btn mt-4" onClick={() => patchDesign({ accent1: DEFAULT_DESIGN.accent1, accent2: DEFAULT_DESIGN.accent2, background: DEFAULT_DESIGN.background, card: DEFAULT_DESIGN.card, text: DEFAULT_DESIGN.text })}>
               Volver a los colores originales
             </button>
           </div>
@@ -520,8 +622,8 @@ export default function EditorPage({ onProject }) {
             Ver resultados de ejemplo
           </label>
           <div className="h-[560px] overflow-auto rounded-3xl border" style={{ borderColor: 'var(--line)', background: draft.design.background }}>
-            <ThemeScope design={draft.design}>
-              <div className="relative min-h-[560px]">
+            <ThemeScope design={draft.design} className="block h-full">
+              <div className="relative h-full min-h-[560px]">
                 <SlideView
                   mode="preview"
                   slide={slide}
@@ -546,7 +648,7 @@ export default function EditorPage({ onProject }) {
         }} />
       )}
       {pending?.type === 'restore' && (
-        <Modal title="¿Restaurar el contenido original?" body="Se vuelven a publicar las 17 diapositivas y la tabla de precios. El diseño de colores se conserva. Los votos no se borran." confirmLabel="Restaurar" danger onClose={() => setPending(null)} onConfirm={restore} />
+        <Modal title="¿Restaurar el contenido original?" body="Se vuelven a publicar las 36 diapositivas y la tabla de precios. El diseño de colores se conserva. Los votos no se borran." confirmLabel="Restaurar" danger onClose={() => setPending(null)} onConfirm={restore} />
       )}
     </div>
   )

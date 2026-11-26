@@ -21,15 +21,71 @@ export async function createStore(db) {
   } else {
     const fallback = defaultSession()
     const slides = existing.slides
-    const slideIndex = Number.isInteger(existing.slideIndex) ? existing.slideIndex : 0
+    let contentVersion = existing.contentVersion || 1
+    let slideIndex = Number.isInteger(existing.slideIndex) ? existing.slideIndex : 0
+    if (!existing.caso3Seeded) {
+      const ids = new Set(slides.map((item) => item.id))
+      const extra = fallback.slides.filter((item) => item.id.startsWith('s-caso3-') && !ids.has(item.id))
+      if (extra.length) {
+        slides.push(...extra)
+        contentVersion += 1
+      }
+    }
+    if (!existing.portadaSeeded && !slides.some((item) => item.id === 's-portada')) {
+      const template = fallback.slides.find((item) => item.id === 's-portada')
+      const service = slides.find((item) => item.id === 's-servicio') || slides.find((item) => item.role === 'service')
+      slides.unshift({
+        ...template,
+        kicker: service?.kicker || template.kicker,
+        title: service?.title || template.title,
+        subtitle: service?.subtitle || template.subtitle,
+      })
+      if (service) {
+        service.kicker = 'Tu servicio'
+        service.title = service.question || '¿En qué servicio trabajás?'
+        service.subtitle = ''
+      }
+      if (slideIndex > 0) slideIndex += 1
+      contentVersion += 1
+    }
+    const legacyAt = slides.findIndex((item) => item.id === 's-servicio')
+    if (legacyAt >= 0) {
+      slides.splice(legacyAt, 1)
+      if (slideIndex > legacyAt) slideIndex -= 1
+      if (slideIndex >= slides.length) slideIndex = Math.max(0, slides.length - 1)
+      contentVersion += 1
+    }
+    if (!existing.caso2Named) {
+      const portada = slides.find((item) => item.id === 's-portada')
+      const caso = slides.find((item) => item.id === 's-caso')
+      if (portada && !String(portada.subtitle || '').includes('Caso clínico 2')) {
+        portada.subtitle = 'Caso clínico 2 – Cuando el lactato cuenta una historia diferente'
+      }
+      if (caso && (caso.kicker === 'El caso' || !caso.kicker)) caso.kicker = 'Caso clínico 2'
+      contentVersion += 1
+    }
+    if (!existing.disneaSeeded) {
+      const ids = new Set(slides.map((item) => item.id))
+      const extra = fallback.slides.filter((item) => item.id.startsWith('s-disnea-') && !ids.has(item.id))
+      if (extra.length) {
+        slides.unshift(...extra)
+        slideIndex += extra.length
+        contentVersion += 1
+      }
+    }
     cache.session = {
       slideIndex: Math.max(0, Math.min(slides.length - 1, slideIndex)),
       showResults: !!existing.showResults,
-      contentVersion: existing.contentVersion || 1,
+      contentVersion,
       slides,
+      caso3Seeded: true,
+      portadaSeeded: true,
+      disneaSeeded: true,
+      caso2Named: true,
       design: existing.design?.background ? existing.design : fallback.design,
       priceTable: Array.isArray(existing.priceTable) ? existing.priceTable : fallback.priceTable,
     }
+    if (!existing.caso3Seeded || !existing.portadaSeeded || !existing.disneaSeeded || !existing.caso2Named || legacyAt >= 0) await persistSession()
   }
 
   for (const person of await participantsCol.find({}).toArray()) {

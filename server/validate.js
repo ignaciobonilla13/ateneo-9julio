@@ -2,14 +2,11 @@ import { DEFAULT_DESIGN, FONT_STACKS } from '../shared/design.js'
 import { cleanLine, isSafeId, newId } from '../shared/text.js'
 
 const ROLES = ['service', 'hypothesis', 'studies', 'cost']
+const REQUIRED_ROLES = ['hypothesis', 'studies', 'cost']
 const ROLE_TYPE = { service: 'single', hypothesis: 'single', studies: 'multi', cost: 'cost' }
 const TYPES = new Set(['text', 'single', 'multi', 'words', 'cost'])
-const VARIANTS = new Set(['plain', 'case', 'labs', 'reveal', 'criteria', 'evolution', 'takeaways'])
-const SERVICE_OPTIONS = [
-  { id: 'uti', fallback: 'UTI' },
-  { id: 'clinica', fallback: 'Clínica' },
-  { id: 'uco', fallback: 'UCO' },
-]
+const VARIANTS = new Set(['plain', 'case', 'labs', 'reveal', 'criteria', 'evolution', 'takeaways', 'panels', 'bars', 'spotlight'])
+const SKINS = new Set(['claro', 'tarjeta', 'oscuro', 'centrado', 'franja'])
 
 function relinkOptions(previous, drafts) {
   const used = new Set()
@@ -84,14 +81,22 @@ function cleanSlide(raw, previous) {
     .filter(Boolean)
   const cards = (Array.isArray(raw?.cards) ? raw.cards : [])
     .slice(0, 8)
-    .map((card) => ({ label: cleanLine(card?.label, 48), value: cleanLine(card?.value, 80) }))
-    .filter((card) => card.label && card.value)
+    .map((card) => ({
+      label: cleanLine(card?.label, 80),
+      value: cleanLine(card?.value, 80),
+      points: (Array.isArray(card?.points) ? card.points : [])
+        .slice(0, 8)
+        .map((point) => cleanLine(point, 240))
+        .filter(Boolean),
+    }))
+    .filter((card) => card.label && (card.value || card.points.length))
   const slide = {
     id: previous?.id || (isSafeId(raw?.id) ? raw.id : newId()),
     type,
     role,
     locked: false,
     variant: VARIANTS.has(raw?.variant) ? raw.variant : 'plain',
+    skin: SKINS.has(raw?.skin) ? raw.skin : 'claro',
     kicker: cleanLine(raw?.kicker, 70),
     title: cleanLine(raw?.title, 140),
     subtitle: cleanLine(raw?.subtitle, 180),
@@ -107,16 +112,6 @@ function cleanSlide(raw, previous) {
   }
   if (collects && !slide.question) throw new Error('Hay una diapositiva con votación y sin pregunta')
   return slide
-}
-
-function forceServiceOptions(options) {
-  const labels = new Map((options || []).map((option) => [option.id, option.label]))
-  return SERVICE_OPTIONS.map((option) => ({
-    id: option.id,
-    label: labels.get(option.id) || option.fallback,
-    price: null,
-    note: '',
-  }))
 }
 
 function cleanDesign(raw) {
@@ -167,7 +162,7 @@ export function prepareContent(previousSlides, incoming) {
     if (ids.has(slide.id)) throw new Error('Hay dos diapositivas con el mismo identificador')
     ids.add(slide.id)
   }
-  for (const role of ROLES) {
+  for (const role of REQUIRED_ROLES) {
     const found = slides.filter((slide) => slide.role === role)
     if (found.length !== 1) throw new Error('No se puede quitar una diapositiva base del análisis')
     const prev = prevByRole.get(role)
@@ -175,10 +170,15 @@ export function prepareContent(previousSlides, incoming) {
     found[0].role = role
     found[0].type = ROLE_TYPE[role]
     found[0].locked = true
-    if (role === 'service') found[0].options = forceServiceOptions(found[0].options)
   }
-  for (const slide of slides) {
-    if (!slide.role) slide.locked = false
+  const kept = slides.filter((slide) => slide.id !== 's-servicio')
+  const serviceSlides = kept.filter((slide) => slide.role === 'service')
+  if (serviceSlides.length > 1) throw new Error('Solo puede haber una pregunta de área')
+  for (const slide of kept) {
+    if (slide.role === 'service') {
+      slide.type = ROLE_TYPE.service
+      slide.locked = true
+    } else if (!slide.role) slide.locked = false
     if ((slide.type === 'single' || slide.type === 'multi') && slide.options.length < 2) {
       throw new Error(`«${slide.title || slide.question || 'Pregunta'}» necesita al menos dos opciones`)
     }
@@ -187,7 +187,7 @@ export function prepareContent(previousSlides, incoming) {
     }
   }
   return {
-    slides,
+    slides: kept,
     design: cleanDesign(incoming.design),
     priceTable: cleanPriceTable(incoming.priceTable),
   }

@@ -30,17 +30,19 @@ function GroupDeck({ mode, groups, summary, detail, footer, countLabel }) {
   const [open, setOpen] = useState([])
   const ids = groups.map((group) => group.id)
   const allOpen = ids.length > 0 && ids.every((id) => open.includes(id))
-  const columns = mode === 'present' ? 'grid gap-4 md:grid-cols-3' : 'grid gap-3'
+  const columns = mode === 'present'
+    ? (groups.length > 3 ? 'grid gap-4 md:grid-cols-2' : 'grid gap-4 md:grid-cols-3')
+    : 'grid gap-3'
   return (
     <div>
-      {mode === 'present' && (
+      {mode === 'present' && groups.length > 1 && (
         <div className="mb-3 flex justify-end">
           <button type="button" className="rounded-full px-3 py-1.5 text-sm font-semibold" style={{ background: 'var(--card)' }} onClick={() => setOpen(allOpen ? [] : ids)}>
-            {allOpen ? 'Compactar' : 'Ver el detalle de los tres'}
+            {allOpen ? 'Compactar' : 'Ver el detalle por servicio'}
           </button>
         </div>
       )}
-      <div className={columns}>
+      <div className={mode === 'present' && groups.length > 1 ? columns : 'grid gap-3'}>
         {groups.map((group) => {
           const expanded = open.includes(group.id)
           const color = groupColor(group.id)
@@ -73,7 +75,10 @@ function GroupDeck({ mode, groups, summary, detail, footer, countLabel }) {
 
 export function ServiceBoard({ results, connected = 0, mode = 'audience' }) {
   const pending = Math.max(0, connected - (results?.total || 0))
-  const columns = mode === 'present' ? 'grid gap-4 md:grid-cols-3' : 'grid gap-3'
+  const count = (results?.groups || []).length
+  const columns = mode === 'present'
+    ? (count > 3 ? 'grid gap-4 md:grid-cols-2' : 'grid gap-4 md:grid-cols-3')
+    : 'grid gap-3'
   return (
     <div>
       <div className={columns}>
@@ -166,7 +171,6 @@ export function WordBoard({ results, mode }) {
 }
 
 export function CostBoard({ results, priceTable = [], footnote = '', myCost = null, mode = 'audience' }) {
-  const columns = mode === 'present' ? 'grid gap-4 md:grid-cols-3' : 'grid gap-3'
   return (
     <div>
       {results?.kind === 'cost' && (

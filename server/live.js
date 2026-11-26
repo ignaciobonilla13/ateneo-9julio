@@ -33,11 +33,22 @@ export function attachLive(io, store) {
     const slide = session.slides[session.slideIndex] || null
     const votes = slide ? store.listVotes(slide.id) : []
     const visible = !!session.showResults || slide?.type === 'cost' || slide?.role === 'cost'
+    const serviceSlide = store.serviceSlide()
+    const resultGroups = serviceSlide
+      ? groupDefs(serviceSlide)
+      : [{ id: 'sala', label: 'Toda la sala', color: '#0e8a78' }]
+    const serviceByParticipant = serviceSlide ? store.serviceMap() : new Map(
+      [
+        ...votes,
+        ...store.listVotes(store.studiesSlide()?.id),
+        ...store.listVotes(store.hypothesisSlide()?.id),
+      ].map((vote) => [vote.participantId, 'sala']),
+    )
     const results = slide && visible
       ? summarize(slide, {
-        groups: groupDefs(store.serviceSlide()),
+        groups: resultGroups,
         votes,
-        serviceByParticipant: store.serviceMap(),
+        serviceByParticipant,
         studiesSlide: store.studiesSlide(),
         hypothesisSlide: store.hypothesisSlide(),
         studyVotes: store.listVotes(store.studiesSlide()?.id),

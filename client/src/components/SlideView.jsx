@@ -21,11 +21,65 @@ export function OptionButton({ letter, label, price = null, note = '', selected 
   )
 }
 
+function hexagon(cx, cy, radius) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const angle = (Math.PI / 180) * (60 * index - 30)
+    return `${(cx + radius * Math.cos(angle)).toFixed(1)},${(cy + radius * Math.sin(angle)).toFixed(1)}`
+  }).join(' ')
+}
+
+function SheetArt() {
+  const solids = [
+    [1380, 210, 78],
+    [1510, 390, 56],
+    [1260, 520, 34],
+  ]
+  const outlines = [
+    [1240, 150, 36],
+    [1460, 250, 28],
+    [1320, 430, 46],
+    [1540, 560, 24],
+    [180, 760, 30],
+  ]
+  return (
+    <div className="sheet-art" aria-hidden="true">
+      <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <g fill="none" stroke="var(--accent)" strokeWidth="1.6" opacity="0.45">
+          <path d="M-40 70 C 180 10, 340 150, 560 70 S 920 0, 1180 80 S 1500 20, 1680 90" />
+          <path d="M-40 108 C 200 48, 360 188, 580 108 S 960 30, 1220 118 S 1520 50, 1680 128" />
+          <path d="M-40 146 C 220 86, 380 226, 600 146 S 990 70, 1260 156" />
+          <path d="M-40 790 C 220 730, 420 860, 680 790 S 1080 700, 1400 800 S 1560 760, 1680 820" />
+          <path d="M-40 828 C 240 768, 440 900, 700 828 S 1120 740, 1440 838" />
+          <path d="M80 866 C 300 806, 520 940, 780 866 S 1180 790, 1480 876" />
+        </g>
+        <g fill="var(--accent)">
+          {solids.map(([cx, cy, radius]) => <polygon key={`s-${cx}-${cy}`} points={hexagon(cx, cy, radius)} opacity="0.82" />)}
+        </g>
+        <g fill="var(--accent2)" opacity="0.55">
+          <polygon points={hexagon(1430, 330, 40)} />
+        </g>
+        <g fill="none" stroke="var(--accent)" strokeWidth="3">
+          {outlines.map(([cx, cy, radius]) => <polygon key={`o-${cx}-${cy}`} points={hexagon(cx, cy, radius)} opacity="0.8" />)}
+        </g>
+      </svg>
+    </div>
+  )
+}
+
+function Rich({ text }) {
+  const parts = String(text || '').split(/(\*[^*\n]+\*)/g)
+  return parts.map((part, index) => (
+    part.startsWith('*') && part.endsWith('*')
+      ? <em key={index}>{part.slice(1, -1)}</em>
+      : <span key={index}>{part}</span>
+  ))
+}
+
 function Body({ lines }) {
   if (!lines?.length) return null
   return (
     <ul className="slide-body">
-      {lines.map((line, index) => <li key={`${index}-${line}`}>{line}</li>)}
+      {lines.map((line, index) => <li key={`${index}-${line}`}><Rich text={line} /></li>)}
     </ul>
   )
 }
@@ -65,19 +119,73 @@ function Takeaways({ lines }) {
       {lines.map((line, index) => (
         <li key={`${index}-${line}`}>
           <span className="num">{index + 1}</span>
-          <span>{line}</span>
+          <span><Rich text={line} /></span>
         </li>
       ))}
     </ol>
   )
 }
 
+function PointLine({ text }) {
+  const index = text.indexOf(':')
+  if (index > 0 && index < 48) {
+    return <><strong>{text.slice(0, index + 1)}</strong>{text.slice(index + 1)}</>
+  }
+  return <Rich text={text} />
+}
+
+function PointCards({ cards }) {
+  return (
+    <div className="point-grid">
+      {cards.map((card) => (
+        <article key={card.label} className="point-card">
+          <h3>{card.label}</h3>
+          <ul>
+            {(card.points || []).map((point) => <li key={point}><PointLine text={point} /></li>)}
+          </ul>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function BarsSlide({ slide }) {
+  return (
+    <div className="bars-layout">
+      <div>
+        {slide.subtitle && <p className="bars-caption">{slide.subtitle}</p>}
+        <div className="bars">
+          {(slide.cards || []).map((card, index) => {
+            const value = Number(String(card.value).replace(',', '.')) || 0
+            return (
+              <div key={card.label} className="bar-col">
+                <span className="bar-value">{card.value}</span>
+                <div className="bar-track">
+                  <div className="bar" data-tone={index === 0 ? 'muted' : 'accent'} style={{ height: `${Math.max(8, Math.min(100, value))}%` }} />
+                </div>
+                <span className="bar-label">{card.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      <ol className="step-list">
+        {(slide.body || []).map((line) => <li key={line}><Rich text={line} /></li>)}
+      </ol>
+    </div>
+  )
+}
+
 function Narrative({ slide }) {
   if (slide.variant === 'takeaways') return <Takeaways lines={slide.body || []} />
+  if (slide.variant === 'bars') return <BarsSlide slide={slide} />
+  if (slide.variant === 'spotlight') return null
+  const withPoints = (slide.cards || []).some((card) => card.points?.length)
   return (
     <div className="grid gap-5">
       <Body lines={slide.body} />
-      {slide.cards?.length > 0 && (slide.variant === 'criteria' ? <Criteria cards={slide.cards} /> : <Labs cards={slide.cards} />)}
+      {withPoints && <PointCards cards={slide.cards} />}
+      {!withPoints && slide.cards?.length > 0 && (slide.variant === 'criteria' ? <Criteria cards={slide.cards} /> : <Labs cards={slide.cards} />)}
     </div>
   )
 }
@@ -105,7 +213,9 @@ export function SlideView({
   const currentValue = local?.slideId === slide.id ? local.value : myVote
   const selectedIds = Array.isArray(currentValue) ? currentValue : (typeof currentValue === 'string' && currentValue ? [currentValue] : [])
   const reveal = mode === 'present' && !!results
-  const showButtons = (slide.type === 'single' || slide.type === 'multi') && !(mode === 'present' && (reveal || slide.role === 'service'))
+  const choiceOptions = (slide.options || []).filter((option) => String(option.label || '').trim())
+  const onStage = mode === 'present' || mode === 'preview'
+  const showButtons = (slide.type === 'single' || slide.type === 'multi') && choiceOptions.length > 0 && !(onStage && (reveal || slide.role === 'service'))
   const atMax = slide.type === 'multi' && slide.maxSelect && selectedIds.length >= slide.maxSelect
   const running = (slide.options || []).reduce((sum, option) => sum + (selectedIds.includes(option.id) ? Number(option.price) || 0 : 0), 0)
 
@@ -164,31 +274,41 @@ export function SlideView({
   }
 
   const hasNarrative = (slide.body?.length || 0) > 0 || (slide.cards?.length || 0) > 0
+  const darkLook = slide.skin === 'oscuro' || slide.variant === 'spotlight'
   const content = (
-    <div className="mx-auto w-full max-w-6xl" data-variant={slide.variant || 'plain'}>
-      {slide.role === 'service' && (
+    <div className="slide-frame mx-auto w-full max-w-6xl" data-variant={slide.variant || 'plain'} data-skin={slide.skin || 'claro'}>
+      {slide.id === 's-disnea-portada' && (
         <img className="brand-logo" src="/jornada.png" alt="IX Jornada Académica · Sanatorio 9 de Julio" />
       )}
       <div className="mb-4 flex items-center justify-between gap-4">
-        <p className="kicker">{slide.kicker}</p>
-        <p className="text-sm tabular-nums" style={{ color: 'var(--muted)' }}>
-          {String(slideIndex + 1).padStart(2, '0')} / {String(slideCount).padStart(2, '0')}
-        </p>
+        <p className="kicker" data-pill={slide.kicker && (mode !== 'audience' || slide.kicker.includes('·') || slide.variant === 'spotlight') ? 'true' : 'false'}>{slide.kicker}</p>
+        {mode === 'audience' && (
+          <p className="text-sm tabular-nums" style={{ color: darkLook ? 'rgba(247,251,250,0.62)' : 'var(--muted)' }}>
+            {String(slideIndex + 1).padStart(2, '0')} / {String(slideCount).padStart(2, '0')}
+          </p>
+        )}
       </div>
-      {slide.title && <h1 className="slide-title">{slide.title}</h1>}
-      {slide.subtitle && <p className="slide-subtitle">{slide.subtitle}</p>}
+      {slide.title && <h1 className="slide-title"><Rich text={slide.title} /></h1>}
+      {slide.subtitle && slide.variant !== 'bars' && <p className="slide-subtitle"><Rich text={slide.subtitle} /></p>}
       {hasNarrative && <div className="mt-6"><Narrative slide={slide} /></div>}
+      {slide.type === 'text' && slide.footnote && (
+        <p className={slide.footnote.trimStart().startsWith('«') ? 'callout callout-quote' : 'callout'}>{slide.footnote}</p>
+      )}
       {hasNarrative && slide.question && <div className="my-6 h-px" style={{ background: 'var(--line)' }} />}
-      {slide.question && slide.type !== 'text' && slide.type !== 'cost' && <h2 className="question">{slide.question}</h2>}
-      {mode === 'present' && slide.role === 'service' && publicUrl && (
-        <div className="mt-6 grid items-center gap-8 lg:grid-cols-[1.1fr_.9fr]">
-          <p className="text-3xl font-semibold tracking-tight md:text-4xl">{(slide.options || []).map((option) => option.label).join('   ·   ')}</p>
-          <QrCard url={publicUrl} hosts={hosts} size={300} />
+      {slide.question && slide.question !== slide.title && slide.type !== 'text' && slide.type !== 'cost' && (
+        <h2 className={slide.title ? 'question' : 'slide-title'}>{slide.question}</h2>
+      )}
+      {mode === 'present' && slide.id === 's-disnea-portada' && publicUrl && (
+        <div className="mt-8 flex justify-center">
+          <QrCard url={publicUrl} hosts={hosts} size={240} />
         </div>
+      )}
+      {onStage && slide.role === 'service' && !reveal && (
+        <p className="mt-8 text-3xl font-semibold tracking-tight md:text-4xl">{choiceOptions.map((option) => option.label).join('   ·   ')}</p>
       )}
       {showButtons && (
         <div className="options mt-4 grid gap-3">
-          {(slide.options || []).map((option, index) => (
+          {choiceOptions.map((option, index) => (
             <OptionButton
               key={option.id}
               letter={letterOf(index)}
@@ -261,9 +381,17 @@ export function SlideView({
   }
 
   return (
-    <div className={`mode-${mode} relative h-full`}>
+    <div className={`mode-${mode} sheet-host relative h-full`}>
       <ProgressBar index={slideIndex} count={slideCount} position="absolute" />
-      <div className={`h-full overflow-y-auto px-6 pt-10 ${mode === 'present' ? 'pb-28' : 'pb-8'}`}>{content}</div>
+      <article className="sheet">
+        <SheetArt />
+        <div className="sheet-bar" />
+        <div className="sheet-body">{content}</div>
+        <footer className="sheet-foot">
+          <span>IX Jornada Académica · Sanatorio 9 de Julio</span>
+          <span className="tabular-nums">{String(slideIndex + 1).padStart(2, '0')} / {String(slideCount).padStart(2, '0')}</span>
+        </footer>
+      </article>
     </div>
   )
 }
