@@ -408,13 +408,35 @@ button:disabled { cursor: default; }
 .audience-framed .sheet-body { padding: 1.5rem 2.6rem 4.6rem; }
 .audience-framed .sheet-foot { bottom: 0; }
 
+.audience-owner {
+  padding: 1rem 1.25rem 1.5rem;
+  text-align: right;
+}
+
+.audience-owner a {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 @media (min-width: 900px) {
   .audience-owner {
     position: fixed;
-    right: 1rem;
-    bottom: 0.75rem;
+    top: 0.7rem;
+    left: 0.75rem;
     z-index: 40;
     padding: 0;
+    text-align: left;
+  }
+
+  .audience-owner a {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1c3330;
+    font-weight: 650;
+    white-space: nowrap;
+    box-shadow: 0 1px 6px rgba(12, 39, 64, 0.16);
   }
 }
 
