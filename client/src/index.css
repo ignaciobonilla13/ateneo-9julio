@@ -382,6 +382,42 @@ button:disabled { cursor: default; }
   margin-top: 0.4rem;
 }
 
+.audience-stage {
+  width: 100%;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: #e6eeeb;
+}
+
+.audience-framed.mode-audience {
+  max-width: none;
+  margin: 0;
+  height: 100%;
+  padding: 0;
+}
+
+.audience-framed .slide-title { font-size: clamp(2.15rem, 4.5vw, 4.35rem); }
+.audience-framed .slide-subtitle { font-size: clamp(1.15rem, 2vw, 1.7rem); }
+.audience-framed .slide-body,
+.audience-framed .step-list { font-size: clamp(1.05rem, 1.6vw, 1.45rem); }
+.audience-framed .bars-layout { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+.audience-framed .lab-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.audience-framed .criteria-grid,
+.audience-framed .point-grid { grid-template-columns: 1fr 1fr; }
+.audience-framed .sheet-body { padding: 1.5rem 2.6rem 4.6rem; }
+.audience-framed .sheet-foot { bottom: 0; }
+
+@media (min-width: 900px) {
+  .audience-owner {
+    position: fixed;
+    right: 1rem;
+    bottom: 0.75rem;
+    z-index: 40;
+    padding: 0;
+  }
+}
+
 .stage-wrap {
   min-height: 100dvh;
   height: 100dvh;

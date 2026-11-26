@@ -1,6 +1,6 @@
 import { letterOf, money } from '@shared/format.js'
 import { sanitizeWord } from '@shared/text.js'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ProgressBar } from './Chrome.jsx'
 import { QrCard } from './QrPanel.jsx'
 import { ChoiceBoard, CostBoard, ServiceBoard, WordBoard } from './Results.jsx'
@@ -190,6 +190,19 @@ function Narrative({ slide }) {
   )
 }
 
+function useDesktopAudience(mode) {
+  const [desktop, setDesktop] = useState(false)
+  useEffect(() => {
+    if (mode !== 'audience') return undefined
+    const query = window.matchMedia('(min-width: 900px)')
+    const update = () => setDesktop(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [mode])
+  return desktop
+}
+
 export function SlideView({
   mode = 'audience',
   slide,
@@ -204,6 +217,7 @@ export function SlideView({
   connected = 0,
   onVote,
 }) {
+  const desktopAudience = useDesktopAudience(mode)
   const [local, setLocal] = useState(null)
   const [voteError, setVoteError] = useState('')
   const [draftWord, setDraftWord] = useState('')
@@ -282,7 +296,7 @@ export function SlideView({
       )}
       <div className="mb-4 flex items-center justify-between gap-4">
         <p className="kicker" data-pill={slide.kicker && (mode !== 'audience' || slide.kicker.includes('·') || slide.variant === 'spotlight') ? 'true' : 'false'}>{slide.kicker}</p>
-        {mode === 'audience' && (
+        {mode === 'audience' && !desktopAudience && (
           <p className="text-sm tabular-nums" style={{ color: darkLook ? 'rgba(247,251,250,0.62)' : 'var(--muted)' }}>
             {String(slideIndex + 1).padStart(2, '0')} / {String(slideCount).padStart(2, '0')}
           </p>
@@ -362,6 +376,27 @@ export function SlideView({
       </div>
     </div>
   )
+
+  if (mode === 'audience' && desktopAudience) {
+    return (
+      <div className="audience-stage">
+        <div className="stage">
+          <div className="mode-audience audience-framed sheet-host relative h-full">
+            <ProgressBar index={slideIndex} count={slideCount} position="absolute" />
+            <article className="sheet">
+              <SheetArt />
+              <div className="sheet-bar" />
+              <div className="sheet-body">{content}</div>
+              <footer className="sheet-foot">
+                <span>IX Jornada Académica · Sanatorio 9 de Julio</span>
+                <span className="tabular-nums">{String(slideIndex + 1).padStart(2, '0')} / {String(slideCount).padStart(2, '0')}</span>
+              </footer>
+            </article>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (mode === 'audience') {
     return (

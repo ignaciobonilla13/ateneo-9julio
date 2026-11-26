@@ -37,7 +37,7 @@ export default function AudiencePage() {
           connected={sync.connected}
           onVote={vote}
         />
-        <div className="px-5 pt-4 text-right">
+        <div className="audience-owner px-5 pt-4 text-right">
           <Link to="/sala" className="text-sm" style={{ color: 'var(--muted)' }}>Acceder como dueño de la sala</Link>
         </div>
       </div>
