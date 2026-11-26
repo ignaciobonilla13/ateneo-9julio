@@ -101,7 +101,8 @@ test('los recuadros con viñetas se conservan', () => {
   const panels = saved.slides.find((slide) => slide.id === 's-caso3-estudios')
   assert.equal(panels.cards.length, 4)
   assert.equal(panels.cards[0].points.length, 3)
-  assert.equal(saved.slides.at(-1).variant, 'bars')
+  assert.equal(saved.slides.find((slide) => slide.id === 's-caso3-saturacion').variant, 'bars')
+  assert.equal(saved.slides.at(-1).id, 's-caso3-mensajes')
 })
 
 test('rechaza un color o un tamaño de texto fuera de rango', () => {

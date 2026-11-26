@@ -1,5 +1,9 @@
 import { letterOf, percent } from './format.js'
 
+export function bySectorSlide(slide) {
+  return !!slide && (slide.role === 'service' || String(slide.id || '').startsWith('s-disnea-'))
+}
+
 function mean(sum, count) {
   if (!count) return 0
   return Math.round(sum / count)
@@ -215,10 +219,133 @@ export function aggregateCost({ groups, people, hypotheses }) {
   }
 }
 
+function selectedIds(slide, value) {
+  if (slide?.type === 'multi') return Array.isArray(value) ? value : []
+  return typeof value === 'string' && value ? [value] : []
+}
+
+export function aggregateRoom({ slide, votes, studiesSlide, studyVotes, hypothesisSlide, hypothesisVotes }) {
+  if (slide?.type === 'cost' || slide?.role === 'cost') {
+    const catalog = (studiesSlide?.options || []).map((option, index) => ({
+      id: option.id,
+      letter: letterOf(index),
+      label: option.label,
+      price: Number(option.price) || 0,
+    }))
+    const byId = new Map(catalog.map((option) => [option.id, option]))
+    const hypotheses = new Map((hypothesisSlide?.options || []).map((option) => [option.id, option.label]))
+    const hypothesisByPerson = new Map(
+      (hypothesisVotes || [])
+        .filter((vote) => typeof vote.value === 'string' && vote.value)
+        .map((vote) => [vote.participantId, vote.value]),
+    )
+    const counts = {}
+    const byHypothesis = new Map()
+    let total = 0
+    let sum = 0
+    for (const vote of studyVotes || []) {
+      const picked = selectedIds({ type: 'multi' }, vote.value).map((id) => byId.get(id)).filter(Boolean)
+      if (!picked.length) continue
+      total += 1
+      const cost = picked.reduce((acc, option) => acc + option.price, 0)
+      sum += cost
+      for (const option of picked) counts[option.id] = (counts[option.id] || 0) + 1
+      const hypothesis = hypothesisByPerson.get(vote.participantId) || ''
+      const row = byHypothesis.get(hypothesis) || { n: 0, sum: 0 }
+      row.n += 1
+      row.sum += cost
+      byHypothesis.set(hypothesis, row)
+    }
+    const studies = catalog
+      .map((option) => ({ ...option, count: counts[option.id] || 0, pct: percent(counts[option.id] || 0, total) }))
+      .sort((a, b) => b.count - a.count || a.letter.localeCompare(b.letter))
+    const hypothesisRows = []
+    for (const [id, row] of byHypothesis) {
+      hypothesisRows.push({
+        id: id || 'ninguna',
+        label: hypotheses.get(id) || 'Sin hipótesis',
+        n: row.n,
+        mean: mean(row.sum, row.n),
+      })
+    }
+    hypothesisRows.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'es'))
+    return { kind: 'chart', mode: 'cost', total, mean: mean(sum, total), studies, hypotheses: hypothesisRows }
+  }
+
+  if (slide?.type === 'words') {
+    const counts = new Map()
+    let total = 0
+    for (const vote of votes || []) {
+      const words = Array.isArray(vote.value) ? vote.value.filter(Boolean) : []
+      if (!words.length) continue
+      total += 1
+      for (const word of words) {
+        const key = String(word).toLocaleLowerCase('es')
+        const current = counts.get(key) || { text: word, count: 0 }
+        current.count += 1
+        counts.set(key, current)
+      }
+    }
+    const words = [...counts.values()].sort((a, b) => b.count - a.count || a.text.localeCompare(b.text, 'es')).slice(0, 10)
+    return { kind: 'chart', mode: 'words', total, words }
+  }
+
+  const options = (slide?.options || []).map((option, index) => ({
+    id: option.id,
+    letter: letterOf(index),
+    label: option.label,
+    price: option.price ?? null,
+  }))
+  const known = new Set(options.map((option) => option.id))
+  const counts = {}
+  let total = 0
+  for (const vote of votes || []) {
+    const ids = selectedIds(slide, vote.value).filter((id) => known.has(id))
+    if (!ids.length) continue
+    total += 1
+    for (const id of ids) counts[id] = (counts[id] || 0) + 1
+  }
+  const ranked = options
+    .map((option) => ({ ...option, count: counts[option.id] || 0, pct: percent(counts[option.id] || 0, total) }))
+    .sort((a, b) => b.count - a.count || a.letter.localeCompare(b.letter))
+  return { kind: 'chart', mode: 'choice', total, options: ranked }
+}
+
+export function brainstormWords(votes, limit = 18) {
+  const counts = new Map()
+  let total = 0
+  for (const vote of votes || []) {
+    const words = Array.isArray(vote.value) ? vote.value.filter(Boolean) : []
+    if (!words.length) continue
+    total += 1
+    for (const word of words) {
+      const key = String(word).toLocaleLowerCase('es')
+      const current = counts.get(key) || { text: word, count: 0 }
+      current.count += 1
+      counts.set(key, current)
+    }
+  }
+  const words = [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.text.localeCompare(b.text, 'es'))
+    .slice(0, limit)
+  return { total, words }
+}
+
 export function summarize(slide, context) {
   if (!slide) return null
   if (slide.role === 'service') {
     return aggregateService({ votes: context.votes, groups: context.groups })
+  }
+  const listed = slide.type === 'single' || slide.type === 'multi' || slide.type === 'words' || slide.type === 'cost' || slide.role === 'cost'
+  if (!context.bySector && listed) {
+    return aggregateRoom({
+      slide,
+      votes: context.votes,
+      studiesSlide: context.studiesSlide,
+      studyVotes: context.studyVotes,
+      hypothesisSlide: context.hypothesisSlide,
+      hypothesisVotes: context.hypothesisVotes,
+    })
   }
   if (slide.type === 'cost' || slide.role === 'cost') {
     const people = buildCostPeople({

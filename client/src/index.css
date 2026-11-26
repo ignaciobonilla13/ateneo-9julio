@@ -346,6 +346,84 @@ button:disabled { cursor: default; }
 
 .meter { transition: width 700ms cubic-bezier(.2, .7, .2, 1); }
 
+.chart-meter { height: 0.7rem; }
+.chart-total { color: var(--text); font-weight: 750; }
+.chart-heading {
+  margin-bottom: 0.7rem;
+  color: var(--text);
+  font-weight: 750;
+}
+.chart-label { color: var(--text); }
+.chart-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  color: var(--text);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.chart-pct { font-size: 1.45rem; }
+.chart-n { font-size: 1.3rem; font-weight: 800; }
+.chart-pct + .chart-n::before { content: "·"; margin-right: 0.45rem; font-weight: 700; }
+.chart-row { font-size: 1.05rem; }
+
+.mode-present .chart-meter,
+.audience-framed .chart-meter { height: 1rem; }
+.mode-present .chart-row,
+.audience-framed .chart-row { font-size: clamp(1.2rem, 1.8vw, 1.7rem); }
+.mode-present .chart-total,
+.audience-framed .chart-total { font-size: clamp(1.25rem, 1.8vw, 1.7rem); }
+.mode-present .chart-heading,
+.audience-framed .chart-heading { font-size: clamp(1.05rem, 1.4vw, 1.3rem); }
+.mode-present .chart-pct,
+.audience-framed .chart-pct { font-size: clamp(1.85rem, 2.8vw, 2.7rem); }
+.mode-present .chart-n,
+.audience-framed .chart-n { font-size: clamp(1.45rem, 2.1vw, 2rem); }
+
+.mode-preview .chart-pct { font-size: 1.55rem; }
+.mode-preview .chart-n { font-size: 1.35rem; }
+.mode-preview .chart-row,
+.mode-preview .chart-total { font-size: 1.05rem; }
+
+.word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem 1.1rem;
+}
+.word-cloud-item {
+  color: var(--text);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-size: calc(1.15rem + (var(--grow) * 1.45rem));
+}
+.word-cloud-n {
+  margin-left: 0.4rem;
+  font-size: 0.62em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.word-cloud-empty {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.mode-present .word-cloud-item {
+  font-size: calc(1.7rem + (var(--grow) * 3.3rem));
+}
+.mode-present .word-cloud-empty {
+  margin-top: 2rem;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+}
+.mode-preview .word-cloud-item {
+  font-size: calc(1.05rem + (var(--grow) * 1.25rem));
+}
+
 .brand-logo {
   display: block;
   width: min(100%, 46rem);

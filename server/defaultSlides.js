@@ -432,20 +432,6 @@ export function defaultSlides() {
       ],
     }),
     slide({
-      id: 's-caso3-mensajes',
-      type: 'text',
-      variant: 'takeaways',
-      kicker: 'Cierre · Integración',
-      title: 'Cinco mensajes para *llevar*',
-      body: [
-        'La disnea es un síntoma multifactorial y no necesariamente responde a una única enfermedad.',
-        'Nuestros antecedentes profesionales y especialidades pueden generar sesgos cognitivos.',
-        'Los estudios complementarios deben responder preguntas clínicas concretas.',
-        'La interpretación fisiopatológica puede evitar estudios innecesarios y orientar decisiones terapéuticas.',
-        'Un examen físico sistemático puede aportar información que no obtenemos solicitando más estudios.',
-      ],
-    }),
-    slide({
       id: 's-caso3-presentacion',
       type: 'text',
       variant: 'case',
@@ -562,6 +548,20 @@ export function defaultSlides() {
         'Excluir otras causas de hipoxemia y disnea con los estudios pertinentes.',
       ],
       footnote: 'Antes de solicitar un nuevo estudio sofisticado, asegurémonos de haber hecho bien el examen clínico',
+    }),
+    slide({
+      id: 's-caso3-mensajes',
+      type: 'text',
+      variant: 'takeaways',
+      kicker: 'Cierre · Integración',
+      title: 'Cinco mensajes para *llevar*',
+      body: [
+        'La disnea es un síntoma multifactorial y no necesariamente responde a una única enfermedad.',
+        'Nuestros antecedentes profesionales y especialidades pueden generar sesgos cognitivos.',
+        'Los estudios complementarios deben responder preguntas clínicas concretas.',
+        'La interpretación fisiopatológica puede evitar estudios innecesarios y orientar decisiones terapéuticas.',
+        'Un examen físico sistemático puede aportar información que no obtenemos solicitando más estudios.',
+      ],
     }),
   ]
 }

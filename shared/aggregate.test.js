@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { aggregateChoice, aggregateCost, aggregateWords, buildCostPeople, summarize } from './aggregate.js'
+import { aggregateChoice, aggregateCost, aggregateWords, brainstormWords, buildCostPeople, summarize } from './aggregate.js'
 import { percent } from './format.js'
 
 const groups = [
@@ -150,4 +150,66 @@ test('la diapositiva de servicio solo reparte los tres grupos', () => {
   assert.equal(result.total, 3)
   assert.equal(result.groups[0].count, 2)
   assert.equal(result.groups[0].pct, 66.7)
+})
+
+test('la lluvia de ideas junta mayúsculas y se queda con las más repetidas', () => {
+  const result = brainstormWords([
+    { value: ['Oliguria', 'lactato'] },
+    { value: ['oliguria'] },
+    { value: ['Fiebre'] },
+    { value: [] },
+  ], 2)
+  assert.equal(result.total, 3)
+  assert.equal(result.words.length, 2)
+  assert.equal(result.words[0].text, 'Oliguria')
+  assert.equal(result.words[0].count, 2)
+  assert.equal(result.words[1].count, 1)
+})
+
+test('fuera del caso 1 el gráfico ordena lo más votado', () => {
+  const result = summarize(
+    {
+      id: 's-hipotesis',
+      type: 'single',
+      options: [
+        { id: 'a', label: 'Sepsis' },
+        { id: 'b', label: 'Isquemia' },
+      ],
+    },
+    {
+      bySector: false,
+      votes: [
+        { participantId: 'p1', value: 'b' },
+        { participantId: 'p2', value: 'a' },
+        { participantId: 'p3', value: 'a' },
+      ],
+    },
+  )
+  assert.equal(result.kind, 'chart')
+  assert.equal(result.total, 3)
+  assert.equal(result.options[0].label, 'Sepsis')
+  assert.equal(result.options[0].count, 2)
+  assert.equal(result.options[1].count, 1)
+})
+
+test('el caso 1 sigue agrupando por servicio', () => {
+  const result = summarize(
+    {
+      id: 's-disnea-origen',
+      type: 'single',
+      options: [
+        { id: 'cardiaco', label: 'Cardíaco' },
+        { id: 'pulmonar', label: 'Pulmonar' },
+      ],
+    },
+    {
+      bySector: true,
+      groups,
+      serviceByParticipant: new Map([['p1', 'uti']]),
+      votes: [{ participantId: 'p1', value: 'cardiaco' }],
+    },
+  )
+  assert.equal(result.kind, 'choice')
+  assert.equal(result.groups[0].n, 1)
+  assert.equal(result.groups[0].options[0].count, 1)
 })

@@ -45,6 +45,7 @@ export default function PresenterPage({ onEdit }) {
             slideIndex={state.slideIndex}
             slideCount={state.slides.length}
             results={state.results}
+            liveWords={state.liveWords}
             priceTable={state.priceTable}
             publicUrl={url}
             hosts={config.hosts || []}

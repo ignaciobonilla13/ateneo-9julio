@@ -1,4 +1,4 @@
-import { countAnswers, participantCost, summarize } from '../shared/aggregate.js'
+import { brainstormWords, bySectorSlide, countAnswers, participantCost, summarize } from '../shared/aggregate.js'
 import { groupDefs } from '../shared/groups.js'
 
 export function attachLive(io, store) {
@@ -34,10 +34,11 @@ export function attachLive(io, store) {
     const votes = slide ? store.listVotes(slide.id) : []
     const visible = !!session.showResults || slide?.type === 'cost' || slide?.role === 'cost'
     const serviceSlide = store.serviceSlide()
-    const resultGroups = serviceSlide
+    const bySector = bySectorSlide(slide)
+    const resultGroups = bySector && serviceSlide
       ? groupDefs(serviceSlide)
       : [{ id: 'sala', label: 'Toda la sala', color: '#0e8a78' }]
-    const serviceByParticipant = serviceSlide ? store.serviceMap() : new Map(
+    const serviceByParticipant = bySector && serviceSlide ? store.serviceMap() : new Map(
       [
         ...votes,
         ...store.listVotes(store.studiesSlide()?.id),
@@ -46,6 +47,7 @@ export function attachLive(io, store) {
     )
     const results = slide && visible
       ? summarize(slide, {
+        bySector,
         groups: resultGroups,
         votes,
         serviceByParticipant,
@@ -89,10 +91,14 @@ export function attachLive(io, store) {
   }
 
   function presenterPayload(snap) {
+    const { session, slide } = snap
+    const visible = !!session.showResults || slide?.type === 'cost' || slide?.role === 'cost'
+    const liveWords = slide?.type === 'words' && !visible ? brainstormWords(store.listVotes(slide.id)) : null
     return {
       ...audienceBase(snap),
       slides: snap.session.slides,
       priceTable: snap.session.priceTable,
+      liveWords,
     }
   }
 

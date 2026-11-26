@@ -94,6 +94,20 @@ function blankSlide(type) {
   return slide
 }
 
+const SAMPLE_CLOUD = {
+  total: 18,
+  words: [
+    { text: 'oliguria', count: 11 },
+    { text: 'lactato', count: 8 },
+    { text: 'metformina', count: 6 },
+    { text: 'taquicardia', count: 4 },
+    { text: 'hipotensión', count: 3 },
+    { text: 'fiebre', count: 2 },
+    { text: 'diuresis', count: 2 },
+    { text: 'fármacos', count: 1 },
+  ],
+}
+
 function sampleResults(slide) {
   if (!slide) return null
   if (slide.role === 'service') {
@@ -109,6 +123,49 @@ function sampleResults(slide) {
         pct: percent(counts[index] || 0, total),
       })),
     }
+  }
+  const sector = slide.role === 'service' || String(slide.id || '').startsWith('s-disnea-')
+  if (!sector && slide.type === 'words') {
+    return {
+      kind: 'chart',
+      mode: 'words',
+      total: 18,
+      words: [
+        { text: 'oliguria', count: 11 },
+        { text: 'lactato', count: 8 },
+        { text: 'metformina', count: 4 },
+      ],
+    }
+  }
+  if (!sector && (slide.type === 'cost' || slide.role === 'cost')) {
+    return {
+      kind: 'chart',
+      mode: 'cost',
+      total: 18,
+      mean: 246000,
+      studies: [
+        { id: 'gas', letter: 'A', label: 'Gasometría + lactato', count: 16, pct: 89 },
+        { id: 'ecg', letter: 'B', label: 'ECG', count: 12, pct: 67 },
+        { id: 'tac', letter: 'C', label: 'TAC abdomen', count: 5, pct: 28 },
+      ],
+      hypotheses: [
+        { id: 'a', label: 'Shock séptico', n: 10, mean: 310000 },
+        { id: 'b', label: 'Otra causa metabólica', n: 8, mean: 180000 },
+      ],
+    }
+  }
+  if (!sector && (slide.type === 'single' || slide.type === 'multi') && slide.options?.length) {
+    const counts = [46, 28, 18, 12, 8, 5]
+    const total = 80
+    const options = slide.options.map((option, index) => ({
+      id: option.id,
+      letter: letterOf(index),
+      label: option.label,
+      price: option.price ?? null,
+      count: counts[index] || 2,
+      pct: percent(counts[index] || 2, total),
+    })).sort((a, b) => b.count - a.count)
+    return { kind: 'chart', mode: 'choice', total, options }
   }
   if ((slide.type === 'single' || slide.type === 'multi') && slide.options?.length) {
     return {
@@ -545,6 +602,7 @@ export default function EditorPage({ onProject }) {
                   <option value="cloud">Nube de palabras</option>
                   <option value="list">Lista</option>
                 </select>
+                <p className="editor-note mt-2">Mientras escriben se ve la nube. Al mostrar resultados, el gráfico de las más repetidas.</p>
               </Field>
               <Field label="Máximo por persona">
                 <input className="field" inputMode="numeric" value={slide.maxWords || 5} onChange={(event) => patchSlide({ maxWords: Math.min(5, Math.max(1, Number(event.target.value.replace(/[^\d]/g, '') || 1))) })} />
@@ -630,6 +688,7 @@ export default function EditorPage({ onProject }) {
                   slideIndex={draft.slides.findIndex((item) => item.id === slide.id)}
                   slideCount={draft.slides.length}
                   results={sample ? sampleResults(slide) : (slide.type === 'cost' ? sampleResults(slide) : null)}
+                  liveWords={!sample && slide.type === 'words' ? (state.liveWords?.words?.length && state.slides?.[state.slideIndex]?.id === slide.id ? state.liveWords : SAMPLE_CLOUD) : null}
                   priceTable={draft.priceTable}
                   publicUrl={typeof window !== 'undefined' ? window.location.origin : ''}
                 />

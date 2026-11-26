@@ -73,6 +73,18 @@ export async function createStore(db) {
         contentVersion += 1
       }
     }
+    let cierreMovido = false
+    if (!existing.cierreAlFinal) {
+      const at = slides.findIndex((item) => item.id === 's-caso3-mensajes')
+      if (at >= 0 && at !== slides.length - 1) {
+        const [cierre] = slides.splice(at, 1)
+        slides.push(cierre)
+        if (slideIndex === at) slideIndex = slides.length - 1
+        else if (slideIndex > at) slideIndex -= 1
+        contentVersion += 1
+        cierreMovido = true
+      }
+    }
     cache.session = {
       slideIndex: Math.max(0, Math.min(slides.length - 1, slideIndex)),
       showResults: !!existing.showResults,
@@ -82,10 +94,11 @@ export async function createStore(db) {
       portadaSeeded: true,
       disneaSeeded: true,
       caso2Named: true,
+      cierreAlFinal: true,
       design: existing.design?.background ? existing.design : fallback.design,
       priceTable: Array.isArray(existing.priceTable) ? existing.priceTable : fallback.priceTable,
     }
-    if (!existing.caso3Seeded || !existing.portadaSeeded || !existing.disneaSeeded || !existing.caso2Named || legacyAt >= 0) await persistSession()
+    if (!existing.caso3Seeded || !existing.portadaSeeded || !existing.disneaSeeded || !existing.caso2Named || legacyAt >= 0 || cierreMovido || !existing.cierreAlFinal) await persistSession()
   }
 
   for (const person of await participantsCol.find({}).toArray()) {

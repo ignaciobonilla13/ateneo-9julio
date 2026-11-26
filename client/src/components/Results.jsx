@@ -10,7 +10,7 @@ function Meter({ value, color }) {
   }, [])
   const width = Math.max(0, Math.min(100, Number(value) || 0))
   return (
-    <div className="h-2.5 overflow-hidden rounded-full" style={{ background: 'var(--line)' }}>
+    <div className="chart-meter overflow-hidden rounded-full" style={{ background: 'var(--line)' }}>
       <div className="meter h-full rounded-full" style={{ width: ready ? `${width}%` : '0%', background: color }} />
     </div>
   )
@@ -111,7 +111,7 @@ function ChoiceBars({ group, color }) {
               {option.label}
               {option.price != null && <span style={{ color: 'var(--muted)' }}> · {money(option.price)}</span>}
             </span>
-            <span className="shrink-0 tabular-nums" style={{ color: 'var(--muted)' }}>{option.count} · {formatPct(option.pct)}</span>
+            <span className="chart-count shrink-0">{option.count} · {formatPct(option.pct)}</span>
           </div>
           <Meter value={option.pct} color={color} />
         </div>
@@ -119,6 +119,92 @@ function ChoiceBars({ group, color }) {
     </div>
   )
 }
+
+function ChartRows({ rows, totalLabel }) {
+  const max = Math.max(...rows.map((row) => row.count), 1)
+  if (!rows.length) return <p style={{ color: 'var(--muted)' }}>Nadie votó todavía.</p>
+  return (
+    <div>
+      {totalLabel && <p className="chart-total mb-4">{totalLabel}</p>}
+      <div className="grid gap-3">
+        {rows.map((row) => (
+          <div key={row.id || row.text} className="chart-row">
+            <div className="mb-1.5 flex items-baseline justify-between gap-4">
+              <span className="chart-label min-w-0">
+                {row.letter && <strong className="mr-2">{row.letter}</strong>}
+                {row.label || row.text}
+              </span>
+              <span className="chart-count shrink-0">
+                {row.pct != null && <span className="chart-pct">{formatPct(row.pct)}</span>}
+                <span className="chart-n">{row.count}</span>
+              </span>
+            </div>
+            <Meter value={(row.count / max) * 100} color="var(--accent)" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function ChartBoard({ results }) {
+  const total = results?.total || 0
+  const people = `${total} ${total === 1 ? 'votante' : 'votantes'}`
+  if (results?.mode === 'words') {
+    return <ChartRows rows={results.words || []} totalLabel={people} />
+  }
+  if (results?.mode === 'cost') {
+    return (
+      <div className="grid gap-6">
+        <p className="chart-total">
+          Costo medio <span className="chart-pct">{money(results.mean)}</span> · {people}
+        </p>
+        <div>
+          <p className="chart-heading">Estudios más pedidos</p>
+          <ChartRows rows={results.studies || []} />
+        </div>
+        {(results.hypotheses || []).length > 0 && (
+          <div className="grid gap-3">
+            <p className="chart-heading">Costo medio según la hipótesis</p>
+            {results.hypotheses.map((row) => (
+              <div key={row.id} className="chart-row flex items-baseline justify-between gap-4">
+                <span className="chart-label min-w-0">{row.label}</span>
+                <span className="chart-count shrink-0">
+                  <span className="chart-pct">{money(row.mean)}</span>
+                  <span className="chart-n">{row.n}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+  return <ChartRows rows={results?.options || []} totalLabel={people} />
+}
+
+export function WordCloud({ words, total = 0 }) {
+  const list = words || []
+  const max = Math.max(...list.map((word) => word.count), 1)
+  if (!list.length) {
+    return <p className="word-cloud-empty">La sala está escribiendo desde el celular.</p>
+  }
+  const people = `${total} ${total === 1 ? 'persona escribiendo' : 'personas escribiendo'}`
+  return (
+    <div>
+      <p className="chart-total mb-5">{people}</p>
+      <div className="word-cloud">
+        {list.map((word) => (
+          <span key={word.text} className="word-cloud-item" style={{ '--grow': word.count / max }}>
+            {word.text}
+            {word.count > 1 && <span className="word-cloud-n">{word.count}</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 
 export function ChoiceBoard({ results, mode }) {
   return (

@@ -3,7 +3,7 @@ import { sanitizeWord } from '@shared/text.js'
 import { useEffect, useState } from 'react'
 import { ProgressBar } from './Chrome.jsx'
 import { QrCard } from './QrPanel.jsx'
-import { ChoiceBoard, CostBoard, ServiceBoard, WordBoard } from './Results.jsx'
+import { ChartBoard, ChoiceBoard, CostBoard, ServiceBoard, WordBoard, WordCloud } from './Results.jsx'
 
 export function OptionButton({ letter, label, price = null, note = '', selected = false, disabled = false, onClick }) {
   return (
@@ -212,6 +212,7 @@ export function SlideView({
   myCost = null,
   results = null,
   priceTable = [],
+  liveWords = null,
   publicUrl = '',
   hosts = [],
   connected = 0,
@@ -362,12 +363,15 @@ export function SlideView({
           <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>{Array.isArray(currentValue) ? currentValue.length : 0} de {slide.maxWords || 5}</p>
         </form>
       )}
-      {slide.type === 'words' && mode === 'present' && !results && (
-        <p className="mt-8 text-2xl" style={{ color: 'var(--muted)' }}>La sala está escribiendo desde el celular.</p>
+      {slide.type === 'words' && (mode === 'present' || mode === 'preview') && !results && (
+        <div className="mt-6">
+          <WordCloud words={liveWords?.words} total={liveWords?.total || 0} />
+        </div>
       )}
       {voteError && <p className="mt-3 text-sm" style={{ color: 'var(--accent)' }} role="alert">{voteError}</p>}
       <div className="mt-6" aria-live="polite">
         {results?.kind === 'service' && <ServiceBoard results={results} connected={connected} mode={mode} />}
+        {results?.kind === 'chart' && <ChartBoard results={results} />}
         {results?.kind === 'choice' && <ChoiceBoard results={results} mode={mode} />}
         {results?.kind === 'words' && <WordBoard results={results} mode={mode} />}
         {(slide.type === 'cost' || slide.role === 'cost') && (
