@@ -88,7 +88,6 @@ function blankSlide(type) {
   if (type === 'words') slide.question = 'Nueva pregunta abierta'
   if (type === 'cost') {
     slide.role = 'cost'
-    slide.locked = true
     slide.title = 'Análisis de costo'
   }
   return slide

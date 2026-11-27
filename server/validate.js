@@ -2,7 +2,7 @@ import { DEFAULT_DESIGN, FONT_STACKS } from '../shared/design.js'
 import { cleanLine, isSafeId, newId } from '../shared/text.js'
 
 const ROLES = ['service', 'hypothesis', 'studies', 'cost']
-const REQUIRED_ROLES = ['hypothesis', 'studies', 'cost']
+const REQUIRED_ROLES = ['hypothesis', 'studies']
 const ROLE_TYPE = { service: 'single', hypothesis: 'single', studies: 'multi', cost: 'cost' }
 const TYPES = new Set(['text', 'single', 'multi', 'words', 'cost'])
 const VARIANTS = new Set(['plain', 'case', 'labs', 'reveal', 'criteria', 'evolution', 'takeaways', 'panels', 'bars', 'spotlight'])

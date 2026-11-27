@@ -410,7 +410,7 @@ export function defaultSlides() {
       id: 's-costo',
       type: 'cost',
       role: 'cost',
-      locked: true,
+      locked: false,
       kicker: 'Sesgo de servicio',
       title: 'Lo que cada servicio pidió',
       subtitle: 'Valores particulares de octubre 2026, IVA incluido.',

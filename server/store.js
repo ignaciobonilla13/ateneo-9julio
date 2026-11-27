@@ -73,6 +73,16 @@ export async function createStore(db) {
         contentVersion += 1
       }
     }
+    let costoLiberado = false
+    if (!existing.costoLibre) {
+      for (const item of slides) {
+        if ((item.role === 'cost' || item.id === 's-costo') && item.locked) {
+          item.locked = false
+          costoLiberado = true
+        }
+      }
+      if (costoLiberado) contentVersion += 1
+    }
     let cierreMovido = false
     if (!existing.cierreAlFinal) {
       const at = slides.findIndex((item) => item.id === 's-caso3-mensajes')
@@ -95,10 +105,11 @@ export async function createStore(db) {
       disneaSeeded: true,
       caso2Named: true,
       cierreAlFinal: true,
+      costoLibre: true,
       design: existing.design?.background ? existing.design : fallback.design,
       priceTable: Array.isArray(existing.priceTable) ? existing.priceTable : fallback.priceTable,
     }
-    if (!existing.caso3Seeded || !existing.portadaSeeded || !existing.disneaSeeded || !existing.caso2Named || legacyAt >= 0 || cierreMovido || !existing.cierreAlFinal) await persistSession()
+    if (!existing.caso3Seeded || !existing.portadaSeeded || !existing.disneaSeeded || !existing.caso2Named || legacyAt >= 0 || cierreMovido || !existing.cierreAlFinal || costoLiberado || !existing.costoLibre) await persistSession()
   }
 
   for (const person of await participantsCol.find({}).toArray()) {

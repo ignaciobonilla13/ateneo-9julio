@@ -16,7 +16,7 @@ test('el caso precargado tiene 36 diapositivas y no adelanta el diagnóstico', (
   assert.equal(slides.find((slide) => slide.id === 's-caso').kicker, 'Caso clínico 2')
   assert.deepEqual(
     slides.filter((slide) => slide.locked).map((slide) => slide.role),
-    ['service', 'hypothesis', 'studies', 'cost'],
+    ['service', 'hypothesis', 'studies'],
   )
   const diagnosisAt = slides.findIndex((slide) => slide.id === 's-diagnostico')
   assert.match(`${slides[diagnosisAt].title} ${slides[diagnosisAt].subtitle}`, /MALA|metformina/)
@@ -63,16 +63,16 @@ test('guardar conserva las diapositivas base y un cambio de texto', () => {
   assert.equal(saved.priceTable.find((row) => row.id === 'ruta').price, 177000)
 })
 
-test('no deja borrar la diapositiva de costo ni cambiar su identidad', () => {
+test('se puede borrar la diapositiva de costo y no la de hipótesis', () => {
   const session = defaultSession()
   const withoutCost = structuredClone(session)
   withoutCost.slides = withoutCost.slides.filter((slide) => slide.role !== 'cost')
-  assert.throws(() => prepareContent(session.slides, withoutCost), /base del análisis/)
+  const saved = prepareContent(session.slides, withoutCost)
+  assert.equal(saved.slides.some((slide) => slide.role === 'cost'), false)
 
-  const replaced = structuredClone(session)
-  const cost = replaced.slides.find((slide) => slide.role === 'cost')
-  cost.id = 'otra-cosa'
-  assert.throws(() => prepareContent(session.slides, replaced), /reemplazar/)
+  const withoutHypothesis = structuredClone(session)
+  withoutHypothesis.slides = withoutHypothesis.slides.filter((slide) => slide.role !== 'hypothesis')
+  assert.throws(() => prepareContent(session.slides, withoutHypothesis), /base del análisis/)
 })
 
 test('una diapositiva suelta puede pasar de opciones a texto', () => {
